@@ -66,15 +66,15 @@ function sortPoke(obj,color,alt)
 end
 
 function sortByPoke(a,b)
-aNotes=tonumber(a.GMNotes)
-bNotes=tonumber(b.GMNotes)
+local aNotes=tonumber(a.GMNotes)
+local bNotes=tonumber(b.GMNotes)
  if aNotes and bNotes and aNotes~=bNotes then
   return aNotes<bNotes
  elseif a.Nickname~=b.Nickname then
   return a.Nickname<b.Nickname
  else
-  aMemo=tonumber(a.Memo)
-  bMemo=tonumber(b.Memo)
+  local aMemo=tonumber(a.Memo)
+  local bMemo=tonumber(b.Memo)
   if aMemo and bMemo then
    return aMemo<bMemo
   end
