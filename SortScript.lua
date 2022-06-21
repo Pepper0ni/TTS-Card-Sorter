@@ -1,41 +1,31 @@
 lock=false
+rev=false
 
-function onLoad()
+function onLoad(state)
+ if state=="rev"then rev=true end
+ self.addContextMenuItem("Override lock",function()lock=false end)
  local selfScale=self.getScale()
  local params={
  function_owner=self,
- label='Sort A-Z',
- tooltip='Sort any deck on the tile alphabetically.',
  font_size=200,
  width=1500,
  height=220,
  scale={1/selfScale.x,1/selfScale.y,1/selfScale.z},
- position={0,0,1.2},
- click_function='sortAlph'
  }
- self.createButton(params)
+ butWrapper(params,{0,0,1.2},"Sort By Name","Sort any deck on the tile alphabetically",'sortAlph')
+ butWrapper(params,{0,0,1.5},"Sort a PTCG Deck","Sort cards into a format prefered for Pokemon TCG decklists",'sortPoke')
+ butWrapper(params,{0,0,1.8},"Sort by Rarity","Sort cards by Rarity",'sortRare')
+ butWrapper(params,{0,0,2.1},"Sort by Type","Sort cards by Type",'sortType')
+ butWrapper(params,{0,0,2.4},"Remove 5+","Removes duplicates in excess of what you can play",'filterFives')
+ if rev then params.color={0,1,0}else params.color={1,0,0}end
+ butWrapper(params,{0,0,2.7},"Reverse Sort","Reverse the sorting.",'toggleReverse')
+end
 
- params.label="Sort Z-A"
- params.position[3]=1.5
- params.click_function='sortRev'
- self.createButton(params)
- 
- params.tooltip="Sort cards into a format prefered for Pokemon TCG decklists"
- params.label="Sort a PTCG Deck"
- params.position[3]=1.8
- params.click_function='sortPoke'
- self.createButton(params)
- 
- params.tooltip="Removes duplicates in excess of what you can play"
- params.label="Remove 5+"
- params.position[3]=2.1
- params.click_function='filterFives'
- self.createButton(params)
- 
- params.tooltip="Removes the lock if needed."
- params.label="Override lock"
- params.position[3]=2.4
- params.click_function='unlock'
+function butWrapper(params,pos,label,tool,func)
+ params.position=pos
+ params.label=label
+ params.tooltip=tool
+ params.click_function=func
  self.createButton(params)
 end
 
@@ -46,28 +36,34 @@ end
 function getDeck(color)
  local zone=CheckForObjects()
  for _,collision in pairs(zone)do
-  if collision.hit_object.type=="Deck"then
-   return collision.hit_object
-  end
+  if collision.hit_object.type=="Deck"then return collision.hit_object end
  end
  broadcastToColor("No Deck Found",color,{1,0,0})
 end
 
 function sortAlph(obj,color,alt)
- if checkLock(color) then sortDeck(function(a,b)return a.Nickname<b.Nickname end,color)end
-end
-
-function sortRev(obj,color,alt)
- if checkLock(color) then sortDeck(function(a,b)return a.Nickname>b.Nickname end,color)end
+ sortDeck(function(a,b)if rev then return a.Nickname>b.Nickname else return a.Nickname<b.Nickname end end,color)
 end
 
 function sortPoke(obj,color,alt)
- if checkLock(color) then sortDeck(function(a,b)return sortByPoke(a,b) end,color)end
+ sortDeck(function(a,b)return sortByPoke(orderArgs(a,b))end,color)
+end
+
+function sortRare(obj,color,alt)
+ sortDeck(function(a,b)return sortByRare(orderArgs(a,b))end,color)
+end
+
+function sortType(obj,color,alt)
+ sortDeck(function(a,b)return sortByType(orderArgs(a,b))end,color)
+end
+
+function orderArgs(a,b)
+ if rev then return b,a else return a,b end
 end
 
 function sortByPoke(a,b)
-local aNotes=tonumber(a.GMNotes)
-local bNotes=tonumber(b.GMNotes)
+ local aNotes=tonumber(a.GMNotes)
+ local bNotes=tonumber(b.GMNotes)
  if aNotes and bNotes and aNotes~=bNotes then
   return aNotes<bNotes
  elseif a.Nickname~=b.Nickname then
@@ -75,28 +71,40 @@ local bNotes=tonumber(b.GMNotes)
  else
   local aMemo=tonumber(a.Memo)
   local bMemo=tonumber(b.Memo)
-  if aMemo and bMemo then
-   return aMemo<bMemo
-  end
+  if aMemo and bMemo then return aMemo<bMemo end
  end
  return a.CardID<b.CardID
 end
 
+function sortByRare(a,b)
+ local aRare=rarityTable[string.match(a.Description,"%u+$")]
+ local bRare=rarityTable[string.match(b.Description,"%u+$")]
+ if(aRare or bRare)and(aRare!=bRare)then return aRare<bRare else return sortByPoke(a,b)end
+end
+
+function sortByType(a,b)
+ local aType=tonumber(a.LuaScriptState)
+ local bType=tonumber(b.LuaScriptState)
+ if(aType or bType)and(aType!=bType)then return aType<bType else return sortByPoke(a,b)end
+end
+
 function sortDeck(sortFunc,color)--credit to dzikakulka
- local deck=getDeck(color)
- if deck then
-  local data=deck.getData()
-  table.sort(data.ContainedObjects,sortFunc)
-  data.DeckIDs={}
-  for _,card in ipairs(data.ContainedObjects)do
-   table.insert(data.DeckIDs,card.CardID)
+ if checkLock(color)then
+  local deck=getDeck(color)
+  if deck then
+   local data=deck.getData()
+   table.sort(data.ContainedObjects,sortFunc)
+   data.DeckIDs={}
+   for c=1,#data.ContainedObjects do
+    table.insert(data.DeckIDs,data.ContainedObjects[c].CardID)
+   end
+   deckRot=deck.GetRotation()
+   selfRot=self.GetRotation()
+   deck.destruct()
+   spawnObjectData({position=self.positionToWorld({2.3,2,0}),rotation={x=deckRot.x,y=selfRot.y,z=deckRot.z},data=data})
   end
-  deckRot=deck.GetRotation()
-  selfRot=self.GetRotation()
-  deck.destruct()
-  spawnObjectData({position=self.positionToWorld({2.3,2,0}),rotation={x=deckRot.x,y=selfRot.y,z=deckRot.z},data=data})
+  lock=false
  end
- lock=false
 end
 
 function filterFives(sortFunc,color)
@@ -135,6 +143,18 @@ function RemoveExcess(deck,data,pos,counts,posInDeck)
  lock=false
 end
 
+function toggleReverse()
+ if rev then
+  rev=false
+  self.script_state=""
+  self.editButton({index=5,color={1,0,0}})
+ else
+  rev=true
+  self.script_state="rev"
+  self.editButton({index=5,color={0,1,0}})
+ end
+end
+
 function checkLock(color)
  if lock==false then
   lock=true
@@ -144,6 +164,29 @@ function checkLock(color)
  return false
 end
 
-function unlock(obj,color,alt)
- lock=false
-end
+rarityTable={
+ C=24,
+ U=23,
+ R=22,
+ RH=21,
+ RHEX=20,
+ RHLVX=19,
+ RHGX=18,
+ RHV=17,
+ RHVMAX=16,
+ RHVSTAR=15,
+ RP=14,
+ LEGEND=13,
+ RACE=12,
+ RBREAK=11,
+ RPS=10,
+ AR=9,
+ RR=8,
+ RU=7,
+ RHS=6,
+ RS=5,
+ RSGX=4,
+ RSV=3,
+ RSVMAX=2,
+ P=1,
+ }
