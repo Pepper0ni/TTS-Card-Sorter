@@ -64,6 +64,8 @@ end
 function sortByPoke(a,b)
  local aNotes=tonumber(a.GMNotes)
  local bNotes=tonumber(b.GMNotes)
+ if #a.GMNotes==6 then aNotes=aNotes*100 end
+ if #b.GMNotes==6 then bNotes=bNotes*100 end
  if aNotes and bNotes and aNotes~=bNotes then
   return aNotes<bNotes
  elseif a.Nickname~=b.Nickname then
@@ -79,13 +81,13 @@ end
 function sortByRare(a,b)
  local aRare=rarityTable[string.match(a.Description,"%u+$")]
  local bRare=rarityTable[string.match(b.Description,"%u+$")]
- if(aRare or bRare)and(aRare!=bRare)then return aRare<bRare else return sortByPoke(a,b)end
+ if(aRare or bRare)and(aRare!=bRare)then return(aRare or 0)<(bRare or 0)else return sortByPoke(a,b)end
 end
 
 function sortByType(a,b)
  local aType=tonumber(a.LuaScriptState)
  local bType=tonumber(b.LuaScriptState)
- if(aType or bType)and(aType!=bType)then return aType<bType else return sortByPoke(a,b)end
+ if(aType or bType)and(aType!=bType)then return(aType or 0)<(bType or 0)else return sortByPoke(a,b)end
 end
 
 function sortDeck(sortFunc,color)--credit to dzikakulka
@@ -108,7 +110,7 @@ function sortDeck(sortFunc,color)--credit to dzikakulka
 end
 
 function filterFives(sortFunc,color)
- if checkLock(color) then
+ if checkLock(color)then
   local deck=getDeck(color)
   excess=nil
   RemoveExcess(deck,deck.getData(),1,{},0,nil)
@@ -165,22 +167,23 @@ function checkLock(color)
 end
 
 rarityTable={
- C=24,
- U=23,
- R=22,
- RH=21,
- RHEX=20,
- RHLVX=19,
- RHGX=18,
- RHV=17,
- RHVMAX=16,
- RHVSTAR=15,
- RP=14,
- LEGEND=13,
- RACE=12,
- RBREAK=11,
- RPS=10,
- AR=9,
+ C=25,
+ U=24,
+ R=23,
+ RH=22,
+ RHEX=21,
+ RHLVX=20,
+ RHGX=19,
+ RHV=18,
+ RHVMAX=17,
+ RHVSTAR=16,
+ RP=15,
+ LEGEND=14,
+ RACE=13,
+ RBREAK=12,
+ RPS=11,
+ AR=10,
+ CC=9,
  RR=8,
  RU=7,
  RHS=6,
