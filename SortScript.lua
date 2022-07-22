@@ -4,13 +4,12 @@ rev=false
 function onLoad(state)
  if state=="rev"then rev=true end
  self.addContextMenuItem("Override lock",function()lock=false end)
- local selfScale=self.getScale()
  local params={
  function_owner=self,
- font_size=200,
+ font_size=197,
  width=1500,
  height=220,
- scale={1/selfScale.x,1/selfScale.y,1/selfScale.z},
+ scale={0.75,1,0.5},
  }
  butWrapper(params,{0,0,1.2},"Sort By Name","Sort any deck on the tile alphabetically",'sortAlph')
  butWrapper(params,{0,0,1.5},"Sort a PTCG Deck","Sort cards into a format prefered for Pokemon TCG decklists",'sortPoke')
