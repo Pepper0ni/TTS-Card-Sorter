@@ -1,8 +1,24 @@
 lock=false
 rev=false
+dupeNum=5
 
 function onLoad(state)
- if state=="rev"then rev=true end
+ if state and state!=""then
+  state=json.parse(state)
+  rev=state.rev or false
+  dupeNum=state.dupeNum or 5
+ end
+ setUp()
+end
+
+function setUp()
+ self.clearContextMenu()
+ self.clearButtons()
+ for c=2,5 do
+  if c!=dupeNum then
+   self.addContextMenuItem("Set Dupe filter to "..tostring(c).."+",||setDupeCount(c))
+  end
+ end
  self.addContextMenuItem("Override lock",function()lock=false end)
  local params={
  function_owner=self,
@@ -15,7 +31,7 @@ function onLoad(state)
  butWrapper(params,{0,0,1.5},"Sort a PTCG Deck","Sort cards into a format prefered for Pokemon TCG decklists",'sortPoke')
  butWrapper(params,{0,0,1.8},"Sort by Rarity","Sort cards by Rarity",'sortRare')
  butWrapper(params,{0,0,2.1},"Sort by Type","Sort cards by Type",'sortType')
- butWrapper(params,{0,0,2.4},"Remove 5+","Removes duplicates in excess of what you can play",'filterFives')
+ butWrapper(params,{0,0,2.4},"Remove "..tostring(dupeNum).."+","Removes duplicates in excess of what you can play",'filterDupes')
  if rev then params.color={0,1,0}else params.color={1,0,0}end
  butWrapper(params,{0,0,2.7},"Reverse Sort","Reverse the sorting.",'toggleReverse')
 end
@@ -26,6 +42,12 @@ function butWrapper(params,pos,label,tool,func)
  params.tooltip=tool
  params.click_function=func
  self.createButton(params)
+end
+
+function setDupeCount(num)
+ dupeNum=num
+ saveData()
+ setUp()
 end
 
 function CheckForObjects()
@@ -108,11 +130,11 @@ function sortDeck(sortFunc,color)--credit to dzikakulka
  end
 end
 
-function filterFives(sortFunc,color)
+function filterDupes(sortFunc,color)
  if checkLock(color)then
   local deck=getDeck(color)
   excess=nil
-  RemoveExcess(deck,deck.getData(),1,{},0,nil)
+  if deck then RemoveExcess(deck,deck.getData(),1,{},0,nil)else lock=false end
  end
 end
 
@@ -122,7 +144,7 @@ function RemoveExcess(deck,data,pos,counts,posInDeck)
   if not counts[cardID]then
    counts[cardID]=1
    posInDeck=posInDeck+1
-  elseif counts[cardID]<4 then
+  elseif counts[cardID]<dupeNum-1 then
    counts[cardID]=counts[cardID]+1
    posInDeck=posInDeck+1
   else
@@ -145,15 +167,13 @@ function RemoveExcess(deck,data,pos,counts,posInDeck)
 end
 
 function toggleReverse()
- if rev then
-  rev=false
-  self.script_state=""
-  self.editButton({index=5,color={1,0,0}})
- else
-  rev=true
-  self.script_state="rev"
-  self.editButton({index=5,color={0,1,0}})
- end
+ if rev then rev=false else rev=true end
+ setUp()
+ saveData()
+end
+
+function saveData()
+ self.script_state=json.serialize({rev=rev,dupeNum=dupeNum})
 end
 
 function checkLock(color)
